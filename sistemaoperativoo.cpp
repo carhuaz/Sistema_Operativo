@@ -311,15 +311,153 @@ public:
 };
 
 class PlanificadorCPU {
+private:
+	// Estructura que representa un proceso 
+    struct Nodo {
+        int id;					// ID único del proceso
+        string nombre;
+        int prioridad;			// Nivel de prioridad (1-10)
+        Nodo* siguiente;		// Apunta al siguiente proceso
+	// Constructor del nodo
+        Nodo(int _id, string _nombre, int _prioridad) {
+            id = _id;
+            nombre = _nombre;
+            prioridad = _prioridad;
+            siguiente = NULL;
+        }
+    };
+
+    Nodo* frente;       // Cola principal
+    Nodo* ejecutados;   // Lista de procesos ejecutados
+    int contadorID;		
+
 public:
+	// Constructor 
     PlanificadorCPU() {
-        cout << "[INFO] Planificador de CPU inicializado (pendiente)\n";
+        frente = NULL;
+        ejecutados = NULL;
+        contadorID = 1;
+        cout << "[INFO] Planificador de CPU inicializado correctamente\n";
     }
+
+    // Inserta proceso en orden según su prioridad
+    void encolar(string nombre, int prioridad) {
+        Nodo* nuevo = new Nodo(contadorID++, nombre, prioridad);
+		// Si la cola está vacía o el nuevo tiene prioridad mayor, se inserta al inicio
+        if (frente == NULL || prioridad > frente->prioridad) {
+            nuevo->siguiente = frente;
+            frente = nuevo;
+        } else {
+            Nodo* temp = frente;
+            // Avanza mientras la prioridad siguiente sea mayor o igual
+            while (temp->siguiente != NULL && temp->siguiente->prioridad >= prioridad) {
+                temp = temp->siguiente;
+            }
+            nuevo->siguiente = temp->siguiente;
+            temp->siguiente = nuevo;
+        }
+
+        cout << "\nProceso '" << nombre << "' encolado con prioridad " << prioridad << ".\n ";
+        cout << "\nProceso encolado correctamente en la cola de prioridad.\n ";
+    }
+
+    // Desencola (ejecuta) el proceso con mayor prioridad
+    void ejecutar() {
+        if (frente == NULL) {
+            cout << "\n[!] No hay procesos en la cola.\n";
+            return;
+        }
+
+        Nodo* temp = frente;		// Tomamos el proceso con mayor prioridad
+        frente = frente->siguiente; // Lo retiramos de la cola
+
+        cout << "\n>>> Ejecutando proceso: " << temp->nombre
+             << " (Prioridad: " << temp->prioridad << ")\n";
+
+        // Agregar a la lista de ejecutados
+        temp->siguiente = ejecutados;
+        ejecutados = temp;
+    }
+
+    // Muestra los procesos que ya fueron ejecutados
+    void mostrarEjecutados() {
+        if (ejecutados == NULL) {
+            cout << "\n[!] Aun no hay procesos ejecutados.\n";
+            return;
+        }
+
+        cout << "\n=== HISTORIAL DE PROCESOS EJECUTADOS ===\n";
+        cout << "ID\tNombre\t\tPrioridad\n";
+        cout << "---------------------------------------\n";
+        Nodo* temp = ejecutados;
+        while (temp != NULL) {
+            cout << temp->id << "\t" << temp->nombre << "\t\t" << temp->prioridad << "\n";
+            temp = temp->siguiente;
+        }
+        cout << "---------------------------------------\n";
+    }
+
+    // Muestra la cola actual
+    void mostrarCola() {
+        if (frente == NULL) {
+            cout << "\n[!] No hay procesos en la cola actualmente.\n";
+            return;
+        }
+
+        cout << "\n=== COLA DE PROCESOS (por prioridad: mayor -> menor) ===\n";
+        cout << "ID\tNombre\t\tPrioridad\n";
+        cout << "---------------------------------------\n";
+        Nodo* temp = frente;
+        while (temp != NULL) {
+            cout << temp->id << "\t" << temp->nombre << "\t\t" << temp->prioridad << "\n";
+            temp = temp->siguiente;
+        }
+        cout << "---------------------------------------\n";
+    }
+
+    // Menú del planificador
     void menuPlanificador() {
-        cout << "\n--- PLANIFICADOR DE CPU ---\n";
-        cout << "Este modulo sera implementado por el equipo.\n";
-        cout << "\nPresione Enter para continuar...";
-        cin.get();
+        int opcion;
+        string nombre;
+        int prioridad;
+
+        do {
+            cout << "\n======= PLANIFICADOR DE CPU =======\n";
+            cout << "1. Encolar proceso\n";
+            cout << "2. Ejecutar proceso (desencolar)\n";
+            cout << "3. Mostrar cola actual\n";
+            cout << "4. Mostrar procesos ejecutados\n";
+            cout << "5. Volver al menu principal\n";
+            cout << "===================================\n";
+            cout << "Opcion: ";
+            cin >> opcion;
+            cin.ignore();
+
+            switch (opcion) {
+                case 1:
+                    cout << "\nNombre del proceso: ";
+                    getline(cin, nombre);
+                    cout << "Prioridad (1-10): ";
+                    cin >> prioridad;
+                    cin.ignore();
+                    encolar(nombre, prioridad);
+                    break;
+                case 2:
+                    ejecutar();
+                    break;
+                case 3:
+                    mostrarCola();
+                    break;
+                case 4:
+                    mostrarEjecutados();
+                    break;
+                case 5:
+                    cout << "Volviendo al menu principal...\n";
+                    break;
+                default:
+                    cout << "Opcion invalida.\n";
+            }
+        } while (opcion != 5);
     }
 };
 
@@ -543,7 +681,7 @@ int main() {
         cout << "========================================\n";
         cout << "1. Gestor de Procesos [FUNCIONAL]\n";
         cout << "2. Gestor de Memoria [PENDIENTE]\n";
-        cout << "3. Planificador de CPU [PENDIENTE]\n";
+        cout << "3. Planificador de CPU [FUNCIONAL]\n";
         cout << "4. Salir\n";
         cout << "========================================\n";
         cout << "Seleccione modulo: ";
