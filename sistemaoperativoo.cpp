@@ -314,109 +314,242 @@ class PlanificadorCPU {
 private:
 	// Estructura que representa un proceso 
     struct Nodo {
-        int id;					// ID único del proceso
-        string nombre;
-        int prioridad;			// Nivel de prioridad (1-10)
-        Nodo* siguiente;		// Apunta al siguiente proceso
+        Proceso* proceso;	// Puntero al proceso que contiene el nodo
+		Nodo* siguiente;	// Puntero al siguiente nodo en la cola		
 	// Constructor del nodo
-        Nodo(int _id, string _nombre, int _prioridad) {
-            id = _id;
-            nombre = _nombre;
-            prioridad = _prioridad;
+        Nodo(Proceso* p) {
+            proceso = p;
             siguiente = NULL;
         }
     };
 
-    Nodo* frente;       // Cola principal
-    Nodo* ejecutados;   // Lista de procesos ejecutados
-    int contadorID;		
+    Nodo* frente = NULL;   // Primer nodo de la cola de procesos     
+    Nodo* fin = NULL;   
+	Nodo*ejecutados = NULL; // Lista de procesos que ya fueron ejecutados
+ 
+    		
 
 public:
-	// Constructor 
+	// Constructor del planificador
     PlanificadorCPU() {
-        frente = NULL;
-        ejecutados = NULL;
-        contadorID = 1;
+        frente = NULL; 			// Inicializa la cola vacía
+        fin = NULL;
+        ejecutados = NULL;		// Inicializa la lista de ejecutados vacía
         cout << "[INFO] Planificador de CPU inicializado correctamente\n";
     }
 
-    // Inserta proceso en orden según su prioridad
-    void encolar(string nombre, int prioridad) {
-        Nodo* nuevo = new Nodo(contadorID++, nombre, prioridad);
-		// Si la cola está vacía o el nuevo tiene prioridad mayor, se inserta al inicio
-        if (frente == NULL || prioridad > frente->prioridad) {
-            nuevo->siguiente = frente;
-            frente = nuevo;
-        } else {
-            Nodo* temp = frente;
-            // Avanza mientras la prioridad siguiente sea mayor o igual
-            while (temp->siguiente != NULL && temp->siguiente->prioridad >= prioridad) {
-                temp = temp->siguiente;
-            }
-            nuevo->siguiente = temp->siguiente;
-            temp->siguiente = nuevo;
-        }
+    // Inserta un proceso en la cola según su prioridad
+    void encolar(Proceso* proc) {
+    Nodo* nuevo = new Nodo(proc);		// Crear nuevo nodo para el proceso
 
-        cout << "\nProceso '" << nombre << "' encolado con prioridad " << prioridad << ".\n ";
-        cout << "\nProceso encolado correctamente en la cola de prioridad.\n ";
-    }
-
-    // Desencola (ejecuta) el proceso con mayor prioridad
-    void ejecutar() {
-        if (frente == NULL) {
-            cout << "\n[!] No hay procesos en la cola.\n";
-            return;
-        }
-
-        Nodo* temp = frente;		// Tomamos el proceso con mayor prioridad
-        frente = frente->siguiente; // Lo retiramos de la cola
-
-        cout << "\n>>> Ejecutando proceso: " << temp->nombre
-             << " (Prioridad: " << temp->prioridad << ")\n";
-
-        // Agregar a la lista de ejecutados
-        temp->siguiente = ejecutados;
-        ejecutados = temp;
-    }
-
-    // Muestra los procesos que ya fueron ejecutados
-    void mostrarEjecutados() {
-        if (ejecutados == NULL) {
-            cout << "\n[!] Aun no hay procesos ejecutados.\n";
-            return;
-        }
-
-        cout << "\n=== HISTORIAL DE PROCESOS EJECUTADOS ===\n";
-        cout << "ID\tNombre\t\tPrioridad\n";
-        cout << "---------------------------------------\n";
-        Nodo* temp = ejecutados;
-        while (temp != NULL) {
-            cout << temp->id << "\t" << temp->nombre << "\t\t" << temp->prioridad << "\n";
+    // Si la cola está vacía o tiene mayor prioridad
+    if (frente == NULL || proc->prioridad > frente->proceso->prioridad) {
+        nuevo->siguiente = frente;		// Nuevo nodo apunta al frente actual
+        frente = nuevo;					// Nuevo nodo se convierte en el frente
+    } else {	
+    	// Buscar la posición correcta según prioridad
+        Nodo* temp = frente;
+        while (temp->siguiente != NULL && temp->siguiente->proceso->prioridad >= proc->prioridad) {
             temp = temp->siguiente;
         }
-        cout << "---------------------------------------\n";
+        nuevo->siguiente = temp->siguiente;	// Insertar nodo en la posición
+        temp->siguiente = nuevo;
     }
+
+    cout << "Proceso '" << proc->nombre << "' agregado a la cola (Prioridad: "
+         << proc->prioridad << ")" << endl;
+}
+
+    // Desencola (ejecuta) el proceso con mayor prioridad
+    void ejecutarProceso() {
+    if (frente == NULL) {
+        cout << "No hay procesos en la cola." << endl;
+        return;
+    }
+
+    Nodo* temp = frente;		// Tomar el nodo del frente
+    frente = frente->siguiente;
+	// Cambia el estado del proceso
+    strcpy(temp->proceso->estado, "ejecutando");
+    cout << "Ejecutando proceso: " << temp->proceso->nombre << endl;
+
+    strcpy(temp->proceso->estado, "terminado");
+    cout << "Proceso '" << temp->proceso->nombre << "' ha terminado." << endl;
+
+    // Guardar en historial de ejecutados SIN eliminar
+    temp->siguiente = ejecutados;
+    ejecutados = temp;
+}
+    // Muestra los procesos que ya fueron ejecutados
+    void mostrarEjecutados() {
+    if (ejecutados == NULL) {
+        cout << "\n Aun no hay procesos ejecutados.\n";
+        return;
+    }
+
+    cout << "\n======= HISTORIAL DE PROCESOS EJECUTADOS ======\n";
+    cout << "ID    Nombre                  Prioridad\n";
+    cout << "===============================================\n";
+
+    Nodo* temp = ejecutados;
+    while (temp != NULL) {
+        cout << temp->proceso->id;
+
+        // Ajuste de espacios según tamaño del ID
+        if (temp->proceso->id < 10) cout << "     ";
+        else if (temp->proceso->id < 100) cout << "    ";
+        else cout << "   ";
+
+        // Imprimir nombre y ajustar espacios
+        cout << temp->proceso->nombre;			// Mostrar nombre del proceso
+        int len = strlen(temp->proceso->nombre);
+        for (int i = len; i < 24; i++) cout << " ";		// Ajustar espacios
+
+        // Imprimir prioridad
+        cout << temp->proceso->prioridad << endl;
+
+        temp = temp->siguiente;
+    }
+
+    cout << "===============================================\n";
+}
+
+// Permite eliminar procesos ejecutados, individualmente o todos
+void eliminarProcesosEjecutados() {
+    int opcion;
+
+    do {
+        cout << "\n===== ELIMINAR PROCESOS EJECUTADOS =====\n";
+        cout << "1. Eliminar por ID\n";
+        cout << "2. Eliminar todos los procesos ejecutados\n";
+        cout << "3. Volver al menu del planificador\n";
+        cout << "Seleccione una opcion: ";
+        cin >> opcion;
+
+        // Validación  de entrada
+        if (cin.fail()) {
+            cin.clear();                // Limpiar error de entrada
+            cin.ignore(1000, '\n');     
+            cout << "\nIngrese solo numeros validos.\n";
+        } else {
+            // Seleccionar acción según opción ingresada
+            switch (opcion) {
+
+                case 1: { // Eliminar proceso por ID
+                    if (ejecutados == NULL) {
+                        // Si esta vacía
+                        cout << "\nNo hay procesos ejecutados.\n";
+                    } else {
+                        int id;
+                        cout << "Ingrese el ID del proceso a eliminar: ";
+                        cin >> id;
+
+                        if (cin.fail()) {
+                            cin.clear();
+                            cin.ignore(1000, '\n');
+                            cout << "\nIngrese un ID valido (solo numeros).\n";
+                        } else {
+                            Nodo* temp = ejecutados;
+                            Nodo* anterior = NULL;
+                            bool encontrado = false;
+
+                            // Buscar nodo con ID especificado
+                            while (temp != NULL) {
+                                if (temp->proceso->id == id) {
+                                    encontrado = true;
+                                    // Si es el primer nodo de la lista
+                                    if (anterior == NULL)
+                                        ejecutados = temp->siguiente;
+                                    else
+                                        anterior->siguiente = temp->siguiente;
+
+                                    delete temp; // Liberar memoria del nodo
+                                    cout << "\nProceso con ID " << id << " eliminado del historial.\n";
+                                    break; 
+                                }
+                                anterior = temp;
+                                temp = temp->siguiente;
+                            }
+
+                            // Si no se encontró el ID
+                            if (!encontrado)
+                                cout << "\nNo se encontro ningun proceso con ese ID.\n";
+                        }
+                    }
+                    break; 
+                }
+
+                case 2: { // Eliminar todos los procesos ejecutados
+                    if (ejecutados == NULL) {
+                        cout << "\nNo hay procesos ejecutados.\n";
+                    } else {
+                        Nodo* temp = ejecutados;
+                        // Recorrer la lista y liberar memoria de cada nodo
+                        while (temp != NULL) {
+                            Nodo* borrar = temp;
+                            temp = temp->siguiente;
+                            delete borrar;
+                        }
+                        ejecutados = NULL; // Lista queda vacía
+                        cout << "\nTodos los procesos ejecutados han sido eliminados.\n";
+                    }
+                    break; 
+                }
+
+                case 3: // Salir del menú
+                    cout << "\nRegresando al menu del planificador...\n";
+                    break;
+
+                default: // Opción inválida
+                    cout << "\nOpcion no valida.\n";
+                    break;
+            }
+        }
+
+// Repetir mientras la opción no sea 3
+    } while (opcion != 3);
+}
 
     // Muestra la cola actual
     void mostrarCola() {
-        if (frente == NULL) {
-            cout << "\n[!] No hay procesos en la cola actualmente.\n";
-            return;
-        }
-
-        cout << "\n=== COLA DE PROCESOS (por prioridad: mayor -> menor) ===\n";
-        cout << "ID\tNombre\t\tPrioridad\n";
-        cout << "---------------------------------------\n";
-        Nodo* temp = frente;
-        while (temp != NULL) {
-            cout << temp->id << "\t" << temp->nombre << "\t\t" << temp->prioridad << "\n";
-            temp = temp->siguiente;
-        }
-        cout << "---------------------------------------\n";
+    if (frente == NULL) {
+        cout << "\n*** La cola de procesos esta vacia ***\n";
+        return;
     }
 
+    cout << "\n=============== COLA DE PROCESOS ===============\n";
+    cout << "ID    Nombre                  Prioridad    Estado\n";
+    cout << "=================================================\n";
+
+    Nodo* temp = frente;
+    while (temp != NULL) {
+        cout << temp->proceso->id;
+
+        // Espacios según tamaño del ID
+        if (temp->proceso->id < 10) cout << "     ";
+        else if (temp->proceso->id < 100) cout << "    ";
+        else cout << "   ";
+
+        cout << temp->proceso->nombre;
+        int len = strlen(temp->proceso->nombre);
+
+        // Ajuste de espacios para nombre
+        for (int i = len; i < 24; i++) cout << " ";
+
+        cout << temp->proceso->prioridad;
+        if (temp->proceso->prioridad < 10) cout << "           ";
+        else if (temp->proceso->prioridad < 100) cout << "          ";
+        else cout << "         ";
+
+        cout << temp->proceso->estado << endl;
+
+        temp = temp->siguiente;
+    }
+
+    cout << "=================================================\n";
+}
     // Menú del planificador
-    void menuPlanificador() {
+    void menuPlanificador(GestorProcesos& gestor) {
         int opcion;
         string nombre;
         int prioridad;
@@ -427,37 +560,92 @@ public:
             cout << "2. Ejecutar proceso (desencolar)\n";
             cout << "3. Mostrar cola actual\n";
             cout << "4. Mostrar procesos ejecutados\n";
-            cout << "5. Volver al menu principal\n";
+            cout << "5. Eliminar procesos ejecutados\n";
+            cout << "6. Volver al menu principal\n";
             cout << "===================================\n";
             cout << "Opcion: ";
             cin >> opcion;
             cin.ignore();
 
             switch (opcion) {
-                case 1:
-                    cout << "\nNombre del proceso: ";
-                    getline(cin, nombre);
-                    cout << "Prioridad (1-10): ";
-                    cin >> prioridad;
-                    cin.ignore();
-                    encolar(nombre, prioridad);
+               case 1: {		// Encolar proceso seleccionado por el usuario
+    			if (gestor.estaVacia()) {
+        		cout << "\nNo hay procesos creados en el Gestor de Procesos.\n";	// Verificar si hay procesos en el gestor
+        		break;
+    				}
+
+    			int idSeleccionado;		// ID del proceso que desea encolar
+    			Proceso* p = NULL;		// Puntero al proceso seleccionado, inicializado en NULL
+    			gestor.mostrar();  		// Mostrar todos los procesos disponibles
+
+   				bool idValido = false;	
+    			while (!idValido) {		// Bucle para asegurar que se ingrese un ID válido
+        			cout << "\nIngrese el ID del proceso que desea encolar: ";
+        			cin >> idSeleccionado;
+
+        		if (cin.fail()) {		// Si la entrada no es un número
+            		cin.clear();
+            		cin.ignore(1000, '\n');
+            		cout << "Ingrese un numero valido (solo digitos).\n";
+        		}
+        		else if (idSeleccionado <= 0) {  // Si el número no es positivo
+            		cout << "El ID debe ser un numero positivo.\n";
+        		}
+        		else {
+            		p = gestor.buscar(idSeleccionado);		// Buscar proceso por ID
+            		if (p == NULL) {
+                		cin.ignore(1000, '\n');
+                		cout << "No existe ningun proceso con ese ID.\n";
+            	}
+            	else {  // Si se encontró el proceso
+                	cin.ignore(1000, '\n'); 
+                	idValido = true;       // ID válido, salir del bucle 
+            }
+        }
+    }   			
+    			if (p != NULL) {
+        			Nodo* temp = frente;	// Nodo temporal para recorrer la cola
+        			bool yaEncolado = false;	// Detectar si ya está encolado
+
+        		while (temp != NULL) {		// Recorrer la cola de procesos
+            		if (temp->proceso == p) {   	// Si se encuentra el proceso en la cola
+                		yaEncolado = true;		// Marcar que ya fue encolado
+                		break;
+            		}
+            		temp = temp->siguiente;	// Avanzar al siguiente nodo
+        		}
+
+        		if (yaEncolado) {  // Si ya estaba en la cola
+            		cout << "El proceso ya fue encolado anteriormente.\n";
+        		}  
+        		else {   		// Si no estaba en la cola
+            		encolar(p);	 // Encolar el proceso en la cola de CPU
+            		strcpy(p->estado, "listo");
+            		cout << "Proceso encolado correctamente.\n";
+        	}
+    	}
+
+    			break;
+			}
+                case 2:		// Ejecutar proceso (desencolar)
+                    ejecutarProceso();
                     break;
-                case 2:
-                    ejecutar();
-                    break;
-                case 3:
+                case 3:		// Mostrar la cola actual
                     mostrarCola();
                     break;
-                case 4:
+                case 4:		// Mostrar los procesos ejecutados
                     mostrarEjecutados();
                     break;
-                case 5:
-                    cout << "Volviendo al menu principal...\n";
-                    break;
+                case 5:		// Eliminar procesos ejecutados
+                    eliminarProcesosEjecutados();
+                	break;
+                case 6:		// Volver al menú principal
+                cout << "Volviendo al menu principal...\n";
+                	break;
                 default:
                     cout << "Opcion invalida.\n";
             }
-        } while (opcion != 5);
+        } while (opcion != 6);
     }
 };
 
@@ -702,7 +890,7 @@ int main() {
                 memoria.menuMemoria();
                 break;
             case 3:
-                planificador.menuPlanificador();
+                planificador.menuPlanificador(gestor);
                 break;
             case 4:
                 cout << "\nGracias por usar el sistema!\n";
