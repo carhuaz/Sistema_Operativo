@@ -7,7 +7,7 @@ using namespace std;
 // FUNCIONES AUXILIARES
 // ============================================
 
-// Convierte todo el texto a minúsculas (más seguro para validaciones)
+// Convierte todo el texto a minï¿½sculas (mï¿½s seguro para validaciones)
 void convertirMinusculas(char* texto) {
     for (int i = 0; i < strlen(texto); i++) {
         if (texto[i] >= 'A' && texto[i] <= 'Z') {
@@ -16,7 +16,7 @@ void convertirMinusculas(char* texto) {
     }
 }
 
-// Valida si un estado es válido (todo en minúsculas)
+// Valida si un estado es vï¿½lido (todo en minï¿½sculas)
 bool esEstadoValido(const char* estado) {
     char temp[20];
     strncpy(temp, estado, 19);
@@ -88,7 +88,7 @@ private:
         return cantidad;
     }
 
-    // Crea un arreglo dinámico con todos los procesos
+    // Crea un arreglo dinï¿½mico con todos los procesos
     Proceso** crearArregloProcesos(int cantidad) {
         Proceso** arreglo = new Proceso*[cantidad];
         Proceso* temp = cabeza;
@@ -177,7 +177,7 @@ public:
         cout << "+================================================+\n";
     }
 
-    // Elimina proceso con confirmación
+    // Elimina proceso con confirmaciï¿½n
     void eliminar(int id) {
         if (cabeza == NULL) {
             cout << "Error: No hay procesos para eliminar.\n";
@@ -244,7 +244,7 @@ public:
         }
     }
 
-    // Cambia estado (todo en minúsculas)
+    // Cambia estado (todo en minï¿½sculas)
     void cambiarEstado(int id, const char* nuevoEstado) {
         Proceso* proc = buscar(id);
         if (proc != NULL) {
@@ -295,18 +295,259 @@ public:
 };
 
 // ============================================
-// MÓDULOS PENDIENTES
+// GESTOR DE MEMORIA: ImplementaciÃ³n con estructura de pila (LIFO)
+// Permite asignar y liberar bloques de memoria para procesos
 // ============================================
+
 class GestorMemoria {
+private:
+    // Gestor de Memoria: Estructura que representa un bloque de memoria
+    struct BloqueMemoria {
+        int idProceso;              // ID del proceso al que pertenece el bloque
+        char nombreProceso[50];     // Nombre del proceso
+        int tamanioMB;              // TamaÃ±o del bloque en MB
+        BloqueMemoria* siguiente;   // Puntero al siguiente bloque (estructura LIFO)
+        
+        // Gestor de Memoria: Constructor del bloque de memoria
+        BloqueMemoria(int _id, const char* _nombre, int _tamanio) {
+            idProceso = _id;
+            strncpy(nombreProceso, _nombre, 49);
+            nombreProceso[49] = '\0';
+            tamanioMB = _tamanio;
+            siguiente = NULL;
+        }
+    };
+    
+    BloqueMemoria* tope;        // Gestor de Memoria: Puntero al tope de la pila
+    int memoriaTotal;           // Gestor de Memoria: Memoria total del sistema en MB
+    int memoriaUsada;           // Gestor de Memoria: Memoria actualmente en uso
+    
 public:
+    // Gestor de Memoria: Constructor - inicializa la pila vacÃ­a con memoria total de 2048 MB
     GestorMemoria() {
-        cout << "[INFO] Gestor de Memoria inicializado (pendiente)\n";
+        tope = NULL;
+        memoriaTotal = 2048;    // 2 GB de memoria total
+        memoriaUsada = 0;
+        cout << "[INFO] Gestor de Memoria inicializado (Memoria total: " 
+             << memoriaTotal << " MB)\n";
     }
-    void menuMemoria() {
-        cout << "\n--- GESTOR DE MEMORIA ---\n";
-        cout << "Este modulo sera implementado por el equipo.\n";
-        cout << "\nPresione Enter para continuar...";
-        cin.get();
+    
+    // Gestor de Memoria: Asignar memoria a un proceso (operaciÃ³n PUSH)
+    // Apila un nuevo bloque de memoria en el tope de la pila
+    void asignarMemoria(int idProceso, const char* nombreProceso, int tamanioMB) {
+        // Gestor de Memoria: Validar que hay suficiente memoria disponible
+        if (memoriaUsada + tamanioMB > memoriaTotal) {
+            cout << "\n[ERROR] Memoria insuficiente. Disponible: " 
+                 << (memoriaTotal - memoriaUsada) << " MB, Solicitado: " 
+                 << tamanioMB << " MB\n";
+            return;
+        }
+        
+        // Gestor de Memoria: Crear nuevo bloque y agregarlo al tope de la pila (PUSH)
+        BloqueMemoria* nuevo = new BloqueMemoria(idProceso, nombreProceso, tamanioMB);
+        nuevo->siguiente = tope;    // El nuevo bloque apunta al anterior tope
+        tope = nuevo;               // El nuevo bloque se convierte en el tope
+        memoriaUsada += tamanioMB;  // Actualizar memoria usada
+        
+        cout << "\n[OK] Memoria asignada correctamente:\n";
+        cout << "     Proceso ID: " << idProceso << " (" << nombreProceso << ")\n";
+        cout << "     Tamanio: " << tamanioMB << " MB\n";
+        cout << "     Memoria disponible: " << (memoriaTotal - memoriaUsada) << " MB\n";
+    }
+    
+    // Gestor de Memoria: Liberar el Ãºltimo bloque asignado (operaciÃ³n POP)
+    // Elimina el bloque del tope de la pila (LIFO - Last In, First Out)
+    void liberarMemoria() {
+        // Gestor de Memoria: Verificar si hay bloques en la pila
+        if (tope == NULL) {
+            cout << "\n[INFO] No hay bloques de memoria asignados.\n";
+            return;
+        }
+        
+        // Gestor de Memoria: Guardar informaciÃ³n del bloque a liberar
+        BloqueMemoria* bloqueALiberar = tope;
+        int idProceso = bloqueALiberar->idProceso;
+        char nombre[50];
+        strcpy(nombre, bloqueALiberar->nombreProceso);
+        int tamanio = bloqueALiberar->tamanioMB;
+        
+        // Gestor de Memoria: Realizar operaciÃ³n POP
+        tope = tope->siguiente;         // El nuevo tope es el siguiente bloque
+        memoriaUsada -= tamanio;        // Actualizar memoria usada
+        delete bloqueALiberar;          // Liberar memoria del bloque
+        
+        cout << "\n[OK] Memoria liberada correctamente:\n";
+        cout << "     Proceso ID: " << idProceso << " (" << nombre << ")\n";
+        cout << "     Tamanio liberado: " << tamanio << " MB\n";
+        cout << "     Memoria disponible: " << (memoriaTotal - memoriaUsada) << " MB\n";
+    }
+    
+    // Gestor de Memoria: Mostrar el estado actual de la memoria
+    // Muestra todos los bloques asignados desde el tope hasta el fondo de la pila
+    void mostrarEstadoMemoria() {
+        cout << "\n=============== ESTADO DE LA MEMORIA ===============\n";
+        cout << "Memoria Total:      " << memoriaTotal << " MB\n";
+        cout << "Memoria Usada:      " << memoriaUsada << " MB\n";
+        cout << "Memoria Disponible: " << (memoriaTotal - memoriaUsada) << " MB\n";
+        cout << "Porcentaje de uso:  " 
+             << (memoriaUsada * 100 / memoriaTotal) << "%\n";
+        cout << "====================================================\n";
+        
+        // Gestor de Memoria: Verificar si hay bloques asignados
+        if (tope == NULL) {
+            cout << "\n*** No hay bloques de memoria asignados ***\n";
+            cout << "====================================================\n";
+            return;
+        }
+        
+        // Gestor de Memoria: Recorrer la pila desde el tope hasta el fondo
+        cout << "\nBLOQUES ASIGNADOS (del mas reciente al mas antiguo):\n";
+        cout << "----------------------------------------------------\n";
+        cout << "Posicion  ID Proc  Nombre Proceso          Tamanio\n";
+        cout << "----------------------------------------------------\n";
+        
+        BloqueMemoria* actual = tope;
+        int posicion = 1;
+        
+        // Gestor de Memoria: Iterar por todos los bloques en la pila
+        while (actual != NULL) {
+            // Gestor de Memoria: Mostrar informaciÃ³n del bloque actual
+            cout << posicion;
+            if (posicion < 10) cout << "         ";
+            else cout << "        ";
+            
+            cout << actual->idProceso;
+            if (actual->idProceso < 10) cout << "        ";
+            else if (actual->idProceso < 100) cout << "       ";
+            else cout << "      ";
+            
+            cout << actual->nombreProceso;
+            int len = strlen(actual->nombreProceso);
+            for (int i = len; i < 24; i++) cout << " ";
+            
+            cout << actual->tamanioMB << " MB\n";
+            
+            actual = actual->siguiente;
+            posicion++;
+        }
+        
+        cout << "====================================================\n";
+    }
+    
+    // Gestor de Memoria: MenÃº principal del gestor de memoria
+    void menuMemoria(GestorProcesos& gestor) {
+        int opcion;
+        
+        do {
+            cout << "\n======= GESTOR DE MEMORIA =======\n";
+            cout << "1. Asignar memoria a proceso (PUSH)\n";
+            cout << "2. Liberar ultimo bloque (POP)\n";
+            cout << "3. Ver estado de la memoria\n";
+            cout << "4. Volver al menu principal\n";
+            cout << "=================================\n";
+            cout << "Opcion: ";
+            cin >> opcion;
+            
+            // Gestor de Memoria: ValidaciÃ³n de entrada
+            if (cin.fail()) {
+                cin.clear();
+                cin.ignore(1000, '\n');
+                cout << "Error: Ingrese un numero valido.\n";
+                continue;
+            }
+            cin.ignore();
+            
+            switch(opcion) {
+                case 1: { // Gestor de Memoria: ASIGNAR MEMORIA (PUSH)
+                    // Gestor de Memoria: Verificar si hay procesos disponibles
+                    if (gestor.estaVacia()) {
+                        cout << "\n[ERROR] No hay procesos creados en el Gestor de Procesos.\n";
+                        cout << "Debe crear procesos primero antes de asignar memoria.\n";
+                        break;
+                    }
+                    
+                    // Gestor de Memoria: Mostrar procesos disponibles
+                    gestor.mostrar();
+                    
+                    int idSeleccionado;
+                    int tamanioMB;
+                    bool entradaValida = false;
+                    
+                    // Gestor de Memoria: Solicitar ID del proceso
+                    while (!entradaValida) {
+                        cout << "\nIngrese el ID del proceso: ";
+                        cin >> idSeleccionado;
+                        
+                        if (cin.fail()) {
+                            cin.clear();
+                            cin.ignore(1000, '\n');
+                            cout << "Error: Debe ingresar un numero valido.\n";
+                        } else if (idSeleccionado <= 0) {
+                            cin.ignore(1000, '\n');
+                            cout << "Error: El ID debe ser un numero positivo.\n";
+                        } else {
+                            // Gestor de Memoria: Buscar el proceso por ID
+                            Proceso* p = gestor.buscar(idSeleccionado);
+                            if (p == NULL) {
+                                cin.ignore(1000, '\n');
+                                cout << "Error: No existe ningun proceso con ese ID.\n";
+                            } else {
+                                entradaValida = true;
+                                cin.ignore(1000, '\n');
+                                
+                                // Gestor de Memoria: Solicitar tamaÃ±o de memoria
+                                bool tamanioValido = false;
+                                while (!tamanioValido) {
+                                    cout << "Ingrese el tamanio de memoria en MB (1-1024): ";
+                                    cin >> tamanioMB;
+                                    
+                                    if (cin.fail()) {
+                                        cin.clear();
+                                        cin.ignore(1000, '\n');
+                                        cout << "Error: Debe ingresar un numero valido.\n";
+                                    } else if (tamanioMB < 1 || tamanioMB > 1024) {
+                                        cin.ignore(1000, '\n');
+                                        cout << "Error: El tamanio debe estar entre 1 y 1024 MB.\n";
+                                    } else {
+                                        tamanioValido = true;
+                                        cin.ignore(1000, '\n');
+                                        
+                                        // Gestor de Memoria: Asignar memoria al proceso
+                                        asignarMemoria(p->id, p->nombre, tamanioMB);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                
+                case 2: // Gestor de Memoria: LIBERAR MEMORIA (POP)
+                    liberarMemoria();
+                    break;
+                
+                case 3: // Gestor de Memoria: VER ESTADO
+                    mostrarEstadoMemoria();
+                    break;
+                
+                case 4: // Gestor de Memoria: VOLVER AL MENÃš PRINCIPAL
+                    cout << "Volviendo al menu principal...\n";
+                    break;
+                
+                default:
+                    cout << "Opcion invalida.\n";
+            }
+        } while(opcion != 4);
+    }
+    
+    // Gestor de Memoria: Destructor - libera toda la memoria asignada
+    ~GestorMemoria() {
+        BloqueMemoria* actual = tope;
+        while (actual != NULL) {
+            BloqueMemoria* temp = actual;
+            actual = actual->siguiente;
+            delete temp;
+        }
     }
 };
 
@@ -332,27 +573,27 @@ private:
 public:
 	// Constructor del planificador
     PlanificadorCPU() {
-        frente = NULL; 			// Inicializa la cola vacía
+        frente = NULL; 			// Inicializa la cola vacï¿½a
         fin = NULL;
-        ejecutados = NULL;		// Inicializa la lista de ejecutados vacía
+        ejecutados = NULL;		// Inicializa la lista de ejecutados vacï¿½a
         cout << "[INFO] Planificador de CPU inicializado correctamente\n";
     }
 
-    // Inserta un proceso en la cola según su prioridad
+    // Inserta un proceso en la cola segï¿½n su prioridad
     void encolar(Proceso* proc) {
     Nodo* nuevo = new Nodo(proc);		// Crear nuevo nodo para el proceso
 
-    // Si la cola está vacía o tiene mayor prioridad
+    // Si la cola estï¿½ vacï¿½a o tiene mayor prioridad
     if (frente == NULL || proc->prioridad > frente->proceso->prioridad) {
         nuevo->siguiente = frente;		// Nuevo nodo apunta al frente actual
         frente = nuevo;					// Nuevo nodo se convierte en el frente
     } else {	
-    	// Buscar la posición correcta según prioridad
+    	// Buscar la posiciï¿½n correcta segï¿½n prioridad
         Nodo* temp = frente;
         while (temp->siguiente != NULL && temp->siguiente->proceso->prioridad >= proc->prioridad) {
             temp = temp->siguiente;
         }
-        nuevo->siguiente = temp->siguiente;	// Insertar nodo en la posición
+        nuevo->siguiente = temp->siguiente;	// Insertar nodo en la posiciï¿½n
         temp->siguiente = nuevo;
     }
 
@@ -395,7 +636,7 @@ public:
     while (temp != NULL) {
         cout << temp->proceso->id;
 
-        // Ajuste de espacios según tamaño del ID
+        // Ajuste de espacios segï¿½n tamaï¿½o del ID
         if (temp->proceso->id < 10) cout << "     ";
         else if (temp->proceso->id < 100) cout << "    ";
         else cout << "   ";
@@ -426,18 +667,18 @@ void eliminarProcesosEjecutados() {
         cout << "Seleccione una opcion: ";
         cin >> opcion;
 
-        // Validación  de entrada
+        // Validaciï¿½n  de entrada
         if (cin.fail()) {
             cin.clear();                // Limpiar error de entrada
             cin.ignore(1000, '\n');     
             cout << "\nIngrese solo numeros validos.\n";
         } else {
-            // Seleccionar acción según opción ingresada
+            // Seleccionar acciï¿½n segï¿½n opciï¿½n ingresada
             switch (opcion) {
 
                 case 1: { // Eliminar proceso por ID
                     if (ejecutados == NULL) {
-                        // Si esta vacía
+                        // Si esta vacï¿½a
                         cout << "\nNo hay procesos ejecutados.\n";
                     } else {
                         int id;
@@ -471,7 +712,7 @@ void eliminarProcesosEjecutados() {
                                 temp = temp->siguiente;
                             }
 
-                            // Si no se encontró el ID
+                            // Si no se encontrï¿½ el ID
                             if (!encontrado)
                                 cout << "\nNo se encontro ningun proceso con ese ID.\n";
                         }
@@ -490,23 +731,23 @@ void eliminarProcesosEjecutados() {
                             temp = temp->siguiente;
                             delete borrar;
                         }
-                        ejecutados = NULL; // Lista queda vacía
+                        ejecutados = NULL; // Lista queda vacï¿½a
                         cout << "\nTodos los procesos ejecutados han sido eliminados.\n";
                     }
                     break; 
                 }
 
-                case 3: // Salir del menú
+                case 3: // Salir del menï¿½
                     cout << "\nRegresando al menu del planificador...\n";
                     break;
 
-                default: // Opción inválida
+                default: // Opciï¿½n invï¿½lida
                     cout << "\nOpcion no valida.\n";
                     break;
             }
         }
 
-// Repetir mientras la opción no sea 3
+// Repetir mientras la opciï¿½n no sea 3
     } while (opcion != 3);
 }
 
@@ -525,7 +766,7 @@ void eliminarProcesosEjecutados() {
     while (temp != NULL) {
         cout << temp->proceso->id;
 
-        // Espacios según tamaño del ID
+        // Espacios segï¿½n tamaï¿½o del ID
         if (temp->proceso->id < 10) cout << "     ";
         else if (temp->proceso->id < 100) cout << "    ";
         else cout << "   ";
@@ -548,7 +789,7 @@ void eliminarProcesosEjecutados() {
 
     cout << "=================================================\n";
 }
-    // Menú del planificador
+    // Menï¿½ del planificador
     void menuPlanificador(GestorProcesos& gestor) {
         int opcion;
         string nombre;
@@ -579,16 +820,16 @@ void eliminarProcesosEjecutados() {
     			gestor.mostrar();  		// Mostrar todos los procesos disponibles
 
    				bool idValido = false;	
-    			while (!idValido) {		// Bucle para asegurar que se ingrese un ID válido
+    			while (!idValido) {		// Bucle para asegurar que se ingrese un ID vï¿½lido
         			cout << "\nIngrese el ID del proceso que desea encolar: ";
         			cin >> idSeleccionado;
 
-        		if (cin.fail()) {		// Si la entrada no es un número
+        		if (cin.fail()) {		// Si la entrada no es un nï¿½mero
             		cin.clear();
             		cin.ignore(1000, '\n');
             		cout << "Ingrese un numero valido (solo digitos).\n";
         		}
-        		else if (idSeleccionado <= 0) {  // Si el número no es positivo
+        		else if (idSeleccionado <= 0) {  // Si el nï¿½mero no es positivo
             		cout << "El ID debe ser un numero positivo.\n";
         		}
         		else {
@@ -597,15 +838,15 @@ void eliminarProcesosEjecutados() {
                 		cin.ignore(1000, '\n');
                 		cout << "No existe ningun proceso con ese ID.\n";
             	}
-            	else {  // Si se encontró el proceso
+            	else {  // Si se encontrï¿½ el proceso
                 	cin.ignore(1000, '\n'); 
-                	idValido = true;       // ID válido, salir del bucle 
+                	idValido = true;       // ID vï¿½lido, salir del bucle 
             }
         }
     }   			
     			if (p != NULL) {
         			Nodo* temp = frente;	// Nodo temporal para recorrer la cola
-        			bool yaEncolado = false;	// Detectar si ya está encolado
+        			bool yaEncolado = false;	// Detectar si ya estï¿½ encolado
 
         		while (temp != NULL) {		// Recorrer la cola de procesos
             		if (temp->proceso == p) {   	// Si se encuentra el proceso en la cola
@@ -639,7 +880,7 @@ void eliminarProcesosEjecutados() {
                 case 5:		// Eliminar procesos ejecutados
                     eliminarProcesosEjecutados();
                 	break;
-                case 6:		// Volver al menú principal
+                case 6:		// Volver al menï¿½ principal
                 cout << "Volviendo al menu principal...\n";
                 	break;
                 default:
@@ -650,7 +891,7 @@ void eliminarProcesosEjecutados() {
 };
 
 // ============================================
-// MENÚ DEL GESTOR DE PROCESOS
+// MENï¿½ DEL GESTOR DE PROCESOS
 // ============================================
 void menuGestorProcesos(GestorProcesos& gestor) {
     int opcion, id, prioridad;
@@ -868,7 +1109,7 @@ int main() {
         cout << "   SISTEMA DE GESTION DE PROCESOS\n";
         cout << "========================================\n";
         cout << "1. Gestor de Procesos [FUNCIONAL]\n";
-        cout << "2. Gestor de Memoria [PENDIENTE]\n";
+        cout << "2. Gestor de Memoria [FUNCIONAL]\n";
         cout << "3. Planificador de CPU [FUNCIONAL]\n";
         cout << "4. Salir\n";
         cout << "========================================\n";
@@ -887,7 +1128,7 @@ int main() {
                 menuGestorProcesos(gestor);
                 break;
             case 2:
-                memoria.menuMemoria();
+                memoria.menuMemoria(gestor);
                 break;
             case 3:
                 planificador.menuPlanificador(gestor);
