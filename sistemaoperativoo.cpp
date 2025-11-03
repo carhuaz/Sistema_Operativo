@@ -293,7 +293,6 @@ public:
         }
     }
 };
-
 // ============================================
 // GESTOR DE MEMORIA: Implementación con estructura de pila (LIFO)
 // Permite asignar y liberar bloques de memoria para procesos
@@ -301,41 +300,117 @@ public:
 
 class GestorMemoria {
 private:
-    // Gestor de Memoria: Estructura que representa un bloque de memoria
+    // ============================================
+    // ESTRUCTURA BLOQUE DE MEMORIA
+    // Representa un bloque de memoria asignado a un proceso
+    // ============================================
     struct BloqueMemoria {
-        int idProceso;              // ID del proceso al que pertenece el bloque
-        char nombreProceso[50];     // Nombre del proceso
-        int tamanioMB;              // Tamaño del bloque en MB
-        BloqueMemoria* siguiente;   // Puntero al siguiente bloque (estructura LIFO)
+        int idProceso;              // ID único del proceso dueño del bloque
+        char nombreProceso[50];     // Nombre descriptivo del proceso
+        int tamanioMB;              // Tamaño del bloque en Megabytes
+        BloqueMemoria* siguiente;   // Puntero al siguiente bloque en la pila
         
-        // Gestor de Memoria: Constructor del bloque de memoria
+        // ============================================
+        // CONSTRUCTOR DEL BLOQUE DE MEMORIA
+        // Inicializa un nuevo bloque con los datos del proceso
+        // ============================================
         BloqueMemoria(int _id, const char* _nombre, int _tamanio) {
             idProceso = _id;
+            // Copia segura del nombre del proceso
             strncpy(nombreProceso, _nombre, 49);
-            nombreProceso[49] = '\0';
+            nombreProceso[49] = '\0';  // Asegura terminación de cadena
             tamanioMB = _tamanio;
-            siguiente = NULL;
+            siguiente = NULL;  // Inicialmente no apunta a ningún bloque
         }
     };
     
-    BloqueMemoria* tope;        // Gestor de Memoria: Puntero al tope de la pila
-    int memoriaTotal;           // Gestor de Memoria: Memoria total del sistema en MB
-    int memoriaUsada;           // Gestor de Memoria: Memoria actualmente en uso
+    // ============================================
+    // VARIABLES PRIVADAS DEL GESTOR
+    // ============================================
+    BloqueMemoria* tope;        // Puntero al último bloque asignado (top de la pila)
+    int memoriaTotal;           // Capacidad total del sistema en MB
+    int memoriaUsada;           // Memoria actualmente ocupada
     
 public:
-    // Gestor de Memoria: Constructor - inicializa la pila vacía con memoria total de 2048 MB
+    // ============================================
+    // CONSTRUCTOR DEL GESTOR DE MEMORIA
+    // Inicializa el sistema con 2048 MB (2GB) de memoria total
+    // ============================================
     GestorMemoria() {
-        tope = NULL;
-        memoriaTotal = 2048;    // 2 GB de memoria total
-        memoriaUsada = 0;
+        tope = NULL;            // Pila vacía al inicio
+        memoriaTotal = 2048;    // 2 GB de memoria total del sistema
+        memoriaUsada = 0;       // Sin memoria usada inicialmente
         cout << "[INFO] Gestor de Memoria inicializado (Memoria total: " 
              << memoriaTotal << " MB)\n";
     }
     
-    // Gestor de Memoria: Asignar memoria a un proceso (operación PUSH)
-    // Apila un nuevo bloque de memoria en el tope de la pila
+    // ============================================
+    // BUSCAR PROCESO EN LA MEMORIA
+    // Recorre la pila buscando un proceso por su ID
+    // Retorna el bloque si lo encuentra, NULL si no existe
+    // ============================================
+    BloqueMemoria* buscarProceso(int idProceso) {
+        BloqueMemoria* actual = tope;
+        // Recorre toda la pila desde el tope hasta el fondo
+        while (actual != NULL) {
+            if (actual->idProceso == idProceso) {
+                return actual;  // Encontrado
+            }
+            actual = actual->siguiente;
+        }
+        return NULL;  // No encontrado
+    }
+    
+    // ============================================
+    // ASIGNAR MEMORIA A UN PROCESO (OPERACIÓN PUSH)
+    // Agrega un nuevo bloque de memoria al tope de la pila
+    // ============================================
     void asignarMemoria(int idProceso, const char* nombreProceso, int tamanioMB) {
-        // Gestor de Memoria: Validar que hay suficiente memoria disponible
+        // ============================================
+        // VERIFICAR SI EL PROCESO YA TIENE MEMORIA
+        // ============================================
+        BloqueMemoria* bloqueExistente = buscarProceso(idProceso);
+        
+        if (bloqueExistente != NULL) {
+            // El proceso ya tiene memoria asignada - ofrecer opciones
+            cout << "\n[AVISO] El proceso '" << nombreProceso 
+                 << "' ya tiene " << bloqueExistente->tamanioMB << " MB asignados.\n";
+            cout << "\nOpciones:\n";
+            cout << "1. Reemplazar (liberar " << bloqueExistente->tamanioMB 
+                 << " MB y asignar " << tamanioMB << " MB)\n";
+            cout << "2. Agregar bloque adicional (total: " 
+                 << (bloqueExistente->tamanioMB + tamanioMB) << " MB)\n";
+            cout << "3. Cancelar operacion\n";
+            cout << "Seleccione una opcion: ";
+            
+            int opcion;
+            cin >> opcion;
+            
+            // Validar entrada del usuario
+            if (cin.fail()) {
+                cin.clear();
+                cin.ignore(1000, '\n');
+                cout << "\n[ERROR] Opcion invalida. Operacion cancelada.\n";
+                return;
+            }
+            cin.ignore(1000, '\n');
+            
+            if (opcion == 1) {
+                // REEMPLAZAR: Liberar bloque anterior y asignar nuevo
+                liberarPorID(idProceso);
+                cout << "\n[INFO] Bloque anterior liberado. Asignando nuevo bloque...\n";
+            } else if (opcion == 2) {
+                // AGREGAR: Continuar con asignación normal (permite múltiples bloques)
+                cout << "\n[INFO] Agregando bloque adicional...\n";
+            } else {
+                cout << "\n[INFO] Operacion cancelada.\n";
+                return;
+            }
+        }
+        
+        // ============================================
+        // VERIFICAR DISPONIBILIDAD DE MEMORIA
+        // ============================================
         if (memoriaUsada + tamanioMB > memoriaTotal) {
             cout << "\n[ERROR] Memoria insuficiente. Disponible: " 
                  << (memoriaTotal - memoriaUsada) << " MB, Solicitado: " 
@@ -343,38 +418,68 @@ public:
             return;
         }
         
-        // Gestor de Memoria: Crear nuevo bloque y agregarlo al tope de la pila (PUSH)
+        // ============================================
+        // CREAR Y AGREGAR NUEVO BLOQUE (OPERACIÓN PUSH)
+        // ============================================
         BloqueMemoria* nuevo = new BloqueMemoria(idProceso, nombreProceso, tamanioMB);
         nuevo->siguiente = tope;    // El nuevo bloque apunta al anterior tope
         tope = nuevo;               // El nuevo bloque se convierte en el tope
-        memoriaUsada += tamanioMB;  // Actualizar memoria usada
+        memoriaUsada += tamanioMB;  // Actualizar contador de memoria usada
         
+        // Confirmar asignación exitosa
         cout << "\n[OK] Memoria asignada correctamente:\n";
         cout << "     Proceso ID: " << idProceso << " (" << nombreProceso << ")\n";
         cout << "     Tamanio: " << tamanioMB << " MB\n";
         cout << "     Memoria disponible: " << (memoriaTotal - memoriaUsada) << " MB\n";
     }
     
-    // Gestor de Memoria: Liberar el último bloque asignado (operación POP)
-    // Elimina el bloque del tope de la pila (LIFO - Last In, First Out)
-    void liberarMemoria() {
-        // Gestor de Memoria: Verificar si hay bloques en la pila
+    // ============================================
+    // LIBERAR BLOQUE POR ID DE PROCESO
+    // Busca y elimina un bloque específico por ID del proceso
+    // ============================================
+    void liberarPorID(int idProceso) {
+        // Verificar si hay bloques en la pila
         if (tope == NULL) {
             cout << "\n[INFO] No hay bloques de memoria asignados.\n";
             return;
         }
         
-        // Gestor de Memoria: Guardar información del bloque a liberar
-        BloqueMemoria* bloqueALiberar = tope;
-        int idProceso = bloqueALiberar->idProceso;
-        char nombre[50];
-        strcpy(nombre, bloqueALiberar->nombreProceso);
-        int tamanio = bloqueALiberar->tamanioMB;
+        BloqueMemoria* actual = tope;
+        BloqueMemoria* anterior = NULL;
         
-        // Gestor de Memoria: Realizar operación POP
-        tope = tope->siguiente;         // El nuevo tope es el siguiente bloque
-        memoriaUsada -= tamanio;        // Actualizar memoria usada
-        delete bloqueALiberar;          // Liberar memoria del bloque
+        // ============================================
+        // BUSCAR EL BLOQUE POR ID EN LA PILA
+        // ============================================
+        while (actual != NULL && actual->idProceso != idProceso) {
+            anterior = actual;
+            actual = actual->siguiente;
+        }
+        
+        // Verificar si se encontró el bloque
+        if (actual == NULL) {
+            cout << "\n[ERROR] No se encontro memoria asignada al proceso ID " << idProceso << endl;
+            return;
+        }
+        
+        // Guardar información para el mensaje de confirmación
+        char nombre[50];
+        strcpy(nombre, actual->nombreProceso);
+        int tamanio = actual->tamanioMB;
+        
+        // ============================================
+        // ELIMINAR EL NODO DE LA PILA
+        // ============================================
+        if (anterior == NULL) {
+            // El bloque a eliminar está en el tope
+            tope = actual->siguiente;
+        } else {
+            // El bloque está en medio o al final de la pila
+            anterior->siguiente = actual->siguiente;
+        }
+        
+        // Actualizar memoria usada y liberar el bloque
+        memoriaUsada -= tamanio;
+        delete actual;
         
         cout << "\n[OK] Memoria liberada correctamente:\n";
         cout << "     Proceso ID: " << idProceso << " (" << nombre << ")\n";
@@ -382,8 +487,41 @@ public:
         cout << "     Memoria disponible: " << (memoriaTotal - memoriaUsada) << " MB\n";
     }
     
-    // Gestor de Memoria: Mostrar el estado actual de la memoria
-    // Muestra todos los bloques asignados desde el tope hasta el fondo de la pila
+    // ============================================
+    // LIBERAR ÚLTIMO BLOQUE ASIGNADO (OPERACIÓN POP)
+    // Elimina el bloque del tope de la pila (LIFO)
+    // ============================================
+    void liberarMemoria() {
+        // Verificar si hay bloques en la pila
+        if (tope == NULL) {
+            cout << "\n[INFO] No hay bloques de memoria asignados.\n";
+            return;
+        }
+        
+        // Guardar información del bloque a liberar
+        BloqueMemoria* bloqueALiberar = tope;
+        int idProceso = bloqueALiberar->idProceso;
+        char nombre[50];
+        strcpy(nombre, bloqueALiberar->nombreProceso);
+        int tamanio = bloqueALiberar->tamanioMB;
+        
+        // ============================================
+        // REALIZAR OPERACIÓN POP
+        // ============================================
+        tope = tope->siguiente;     // El nuevo tope es el siguiente bloque
+        memoriaUsada -= tamanio;    // Actualizar memoria usada
+        delete bloqueALiberar;      // Liberar memoria del bloque
+        
+        cout << "\n[OK] Memoria liberada correctamente:\n";
+        cout << "     Proceso ID: " << idProceso << " (" << nombre << ")\n";
+        cout << "     Tamanio liberado: " << tamanio << " MB\n";
+        cout << "     Memoria disponible: " << (memoriaTotal - memoriaUsada) << " MB\n";
+    }
+    
+    // ============================================
+    // MOSTRAR ESTADO ACTUAL DE LA MEMORIA
+    // Muestra todos los bloques desde el tope hasta el fondo
+    // ============================================
     void mostrarEstadoMemoria() {
         cout << "\n=============== ESTADO DE LA MEMORIA ===============\n";
         cout << "Memoria Total:      " << memoriaTotal << " MB\n";
@@ -393,14 +531,14 @@ public:
              << (memoriaUsada * 100 / memoriaTotal) << "%\n";
         cout << "====================================================\n";
         
-        // Gestor de Memoria: Verificar si hay bloques asignados
+        // Verificar si hay bloques asignados
         if (tope == NULL) {
             cout << "\n*** No hay bloques de memoria asignados ***\n";
             cout << "====================================================\n";
             return;
         }
         
-        // Gestor de Memoria: Recorrer la pila desde el tope hasta el fondo
+        // Mostrar lista de bloques asignados
         cout << "\nBLOQUES ASIGNADOS (del mas reciente al mas antiguo):\n";
         cout << "----------------------------------------------------\n";
         cout << "Posicion  ID Proc  Nombre Proceso          Tamanio\n";
@@ -409,9 +547,9 @@ public:
         BloqueMemoria* actual = tope;
         int posicion = 1;
         
-        // Gestor de Memoria: Iterar por todos los bloques en la pila
+        // Recorrer toda la pila mostrando cada bloque
         while (actual != NULL) {
-            // Gestor de Memoria: Mostrar información del bloque actual
+            // Formatear salida para alinear columnas
             cout << posicion;
             if (posicion < 10) cout << "         ";
             else cout << "        ";
@@ -434,7 +572,10 @@ public:
         cout << "====================================================\n";
     }
     
-    // Gestor de Memoria: Menú principal del gestor de memoria
+    // ============================================
+    // MENÚ PRINCIPAL DEL GESTOR DE MEMORIA
+    // Interfaz de usuario para interactuar con el sistema
+    // ============================================
     void menuMemoria(GestorProcesos& gestor) {
         int opcion;
         
@@ -448,7 +589,7 @@ public:
             cout << "Opcion: ";
             cin >> opcion;
             
-            // Gestor de Memoria: Validación de entrada
+            // Validar entrada del usuario
             if (cin.fail()) {
                 cin.clear();
                 cin.ignore(1000, '\n');
@@ -458,22 +599,22 @@ public:
             cin.ignore();
             
             switch(opcion) {
-                case 1: { // Gestor de Memoria: ASIGNAR MEMORIA (PUSH)
-                    // Gestor de Memoria: Verificar si hay procesos disponibles
+                case 1: { // ASIGNAR MEMORIA (PUSH)
+                    // Verificar si hay procesos disponibles
                     if (gestor.estaVacia()) {
                         cout << "\n[ERROR] No hay procesos creados en el Gestor de Procesos.\n";
                         cout << "Debe crear procesos primero antes de asignar memoria.\n";
                         break;
                     }
                     
-                    // Gestor de Memoria: Mostrar procesos disponibles
+                    // Mostrar procesos disponibles
                     gestor.mostrar();
                     
                     int idSeleccionado;
                     int tamanioMB;
                     bool entradaValida = false;
                     
-                    // Gestor de Memoria: Solicitar ID del proceso
+                    // Solicitar ID del proceso con validación
                     while (!entradaValida) {
                         cout << "\nIngrese el ID del proceso: ";
                         cin >> idSeleccionado;
@@ -486,7 +627,7 @@ public:
                             cin.ignore(1000, '\n');
                             cout << "Error: El ID debe ser un numero positivo.\n";
                         } else {
-                            // Gestor de Memoria: Buscar el proceso por ID
+                            // Buscar el proceso por ID
                             Proceso* p = gestor.buscar(idSeleccionado);
                             if (p == NULL) {
                                 cin.ignore(1000, '\n');
@@ -495,7 +636,7 @@ public:
                                 entradaValida = true;
                                 cin.ignore(1000, '\n');
                                 
-                                // Gestor de Memoria: Solicitar tamaño de memoria
+                                // Solicitar tamaño de memoria con validación
                                 bool tamanioValido = false;
                                 while (!tamanioValido) {
                                     cout << "Ingrese el tamanio de memoria en MB (1-1024): ";
@@ -512,7 +653,7 @@ public:
                                         tamanioValido = true;
                                         cin.ignore(1000, '\n');
                                         
-                                        // Gestor de Memoria: Asignar memoria al proceso
+                                        // Asignar memoria al proceso
                                         asignarMemoria(p->id, p->nombre, tamanioMB);
                                     }
                                 }
@@ -522,15 +663,15 @@ public:
                     break;
                 }
                 
-                case 2: // Gestor de Memoria: LIBERAR MEMORIA (POP)
+                case 2: // LIBERAR MEMORIA (POP)
                     liberarMemoria();
                     break;
                 
-                case 3: // Gestor de Memoria: VER ESTADO
+                case 3: // VER ESTADO DE LA MEMORIA
                     mostrarEstadoMemoria();
                     break;
                 
-                case 4: // Gestor de Memoria: VOLVER AL MENÚ PRINCIPAL
+                case 4: // VOLVER AL MENÚ PRINCIPAL
                     cout << "Volviendo al menu principal...\n";
                     break;
                 
@@ -540,17 +681,19 @@ public:
         } while(opcion != 4);
     }
     
-    // Gestor de Memoria: Destructor - libera toda la memoria asignada
+    // ============================================
+    // DESTRUCTOR DEL GESTOR DE MEMORIA
+    // Libera toda la memoria asignada al destruir el objeto
+    // ============================================
     ~GestorMemoria() {
         BloqueMemoria* actual = tope;
         while (actual != NULL) {
             BloqueMemoria* temp = actual;
             actual = actual->siguiente;
-            delete temp;
+            delete temp;  // Liberar cada bloque de memoria
         }
     }
 };
-
 class PlanificadorCPU {
 private:
 	// Estructura que representa un proceso 
